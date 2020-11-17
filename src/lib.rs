@@ -14,8 +14,11 @@ mod speed;
 ////////////////////////////////////////////////////////////////////////////////
 
 
+use std::sync::{Arc, Mutex};
+
+use rosrust::Time;
 use rosrust_msg::std_msgs::Float64;
-use rosrust_msg::geometry_msgs::PoseWithCovarianceStamped;
+use rustros_tf::TfListener;
 
 use errors::*;
 
@@ -41,31 +44,43 @@ pub fn run() -> Result<()> {
         d_limit: 100.0,
     };
 
-    let speed: f64 = rosrust::param("~speed").unwrap().get()?;
-    let speed = Float64 { data: speed };
-
     // Setup controller
     let controller = speed::SpeedPidController::new(pid_constants);
+    let setpoint_controller = Arc::new(Mutex::new(controller));
+    let update_controller = setpoint_controller.clone();
 
     // Create publishers
     let drivetrain_pub = rosrust::publish("/tiger_car/speed", 100)?;
 
-    // Register Subscriber
+    // Register Subscriber to get setpoint
     rosrust::subscribe(
-        "amcl_pose",
+        "/tiger_controller/speed",
         100,
-        move |pose: PoseWithCovarianceStamped| {
-
-            // Calculate steering output
-            let speed = controller.update(pose);
-
-            // Send control outputs
-            drivetrain_pub.send(speed.clone()).unwrap();
+        move |speed: Float64| {
+            // Update the new setpoint
+            let mut controller = setpoint_controller.lock().unwrap();
+            controller.update_setpoint(speed.data);
         }
     )?;
 
-    // Breaks when a shutdown signal is sent
-    rosrust::spin();
+    // Listen for transforms
+    let listener = TfListener::new();
+    let rate = rosrust::rate(1.0);
+
+    while rosrust::is_ok() {
+        // Get updated odom transform
+        let tf = listener.lookup_transform("odom", "base", Time::new()).unwrap();
+        
+        // Determine new output from controller
+        let mut controller = update_controller.lock().unwrap();
+        let output = controller.update_measurement(tf);
+        
+        // Publish new control output
+        drivetrain_pub.send(output)?;
+        
+        // Sleep to maintain rate
+        rate.sleep();
+    }
 
     Ok(())
 }

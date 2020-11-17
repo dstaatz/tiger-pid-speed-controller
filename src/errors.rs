@@ -2,6 +2,7 @@
 
 
 use rosrust::error::{self, rosxmlrpc, tcpros, naming};
+use rustros_tf::TfError;
 
 error_chain! {
     foreign_links {
