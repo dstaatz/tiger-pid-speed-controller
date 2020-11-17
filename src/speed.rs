@@ -1,15 +1,11 @@
 /* Copyright (C) 2020 Dylan Staatz - All Rights Reserved. */
 
 
-use pid::{Pid, ControlOutput};
+use std::time::Duration;
 
+use pid::Pid;
 use rosrust_msg::std_msgs::Float64;
-use rosrust_msg::geometry_msgs::Twist;
-use rosrust_msg::geometry_msgs::Pose2D;
-use rosrust_msg::geometry_msgs::PoseStamped;
-
 use rustros_tf::msg::geometry_msgs::TransformStamped;
-
 
 
 #[derive(Debug, Clone, PartialEq)]
@@ -47,20 +43,34 @@ impl SpeedPidController {
 
     /// Determine the Steering output based on new measurement
     pub fn update_measurement(&mut self, tf: TransformStamped) -> Float64 {
-        self.prev_tf = Some(tf);
-        unimplemented!();
+        
+        match &self.prev_tf {
+            None => {
+                self.prev_tf = Some(tf);
+                Float64 { data: 0.0 }
+            },
+            Some(prev) => {
+                let speed = calc_speed(prev, &tf);
+                let output = self.pid.next_control_output(speed);
+                self.prev_tf = Some(tf);
+                Float64 { data: output.output }
+            },
+        }
     }
 }
 
 
-// Determine the linear and augular speed based on two stamped locations
-fn calc_twist(prev: PoseStamped, current: PoseStamped) -> Twist {
-    unimplemented!();
-}
+// Determine the magnitude of the speed in 2d space based on two stamped locations
+fn calc_speed(prev: &TransformStamped, cur: &TransformStamped) -> f64 {
+    
+    let cur_time = Duration::new(cur.header.stamp.sec.into(), cur.header.stamp.nsec.into());
+    let prev_time = Duration::new(prev.header.stamp.sec.into(), prev.header.stamp.nsec.into());
+    let delta_time = cur_time - prev_time;
+    let delta_time = delta_time.as_secs_f64();
 
+    let delta_x = cur.transform.translation.x - prev.transform.translation.x;
+    let delta_y = cur.transform.translation.y - prev.transform.translation.y;
 
-// Determine the magnitude of the speed based on two stamped locations
-fn calc_speed(prev: PoseStamped, current: PoseStamped) -> f64 {
-    unimplemented!();
+    (delta_x*delta_x + delta_y*delta_y).sqrt() / delta_time
 }
 

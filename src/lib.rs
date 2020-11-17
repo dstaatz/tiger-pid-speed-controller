@@ -65,11 +65,11 @@ pub fn run() -> Result<()> {
 
     // Listen for transforms
     let listener = TfListener::new();
-    let rate = rosrust::rate(1.0);
+    let rate = rosrust::rate(10.0);
 
     while rosrust::is_ok() {
         // Get updated odom transform
-        let tf = listener.lookup_transform("odom", "base", Time::new()).unwrap();
+        let tf = listener.lookup_transform("odom", "base", Time::new()).unwrap(); // Probably should unwrap this
         
         // Determine new output from controller
         let mut controller = update_controller.lock().unwrap();
