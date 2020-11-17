@@ -21,12 +21,13 @@ use rosrust_msg::std_msgs::Float64;
 use rustros_tf::TfListener;
 
 use errors::*;
+use speed::{PidConstants, SpeedPidController};
 
 
 pub fn run() -> Result<()> {
 
     // Get parameters
-    // let pid_constants = speed::PidConstants {
+    // let pid_constants = PidConstants {
     //     kp: rosrust::param("~kp").unwrap().get()?,
     //     ki: rosrust::param("~ki").unwrap().get()?,
     //     kd: rosrust::param("~kd").unwrap().get()?,
@@ -35,7 +36,7 @@ pub fn run() -> Result<()> {
     //     d_limit: rosrust::param("~d_limit").unwrap().get()?,
     // };
 
-    let pid_constants = speed::PidConstants {
+    let pid_constants = PidConstants {
         kp: 1.0,
         ki: 0.0,
         kd: 0.0,
@@ -44,8 +45,10 @@ pub fn run() -> Result<()> {
         d_limit: 100.0,
     };
 
+    let constant_speed: f64 = rosrust::param("~constant_speed").unwrap().get().unwrap_or(0.25);
+
     // Setup controller
-    let controller = speed::SpeedPidController::new(pid_constants);
+    let controller = SpeedPidController::new(pid_constants, constant_speed);
     let setpoint_controller = Arc::new(Mutex::new(controller));
     let update_controller = setpoint_controller.clone();
 
@@ -59,7 +62,7 @@ pub fn run() -> Result<()> {
         move |speed: Float64| {
             // Update the new setpoint
             let mut controller = setpoint_controller.lock().unwrap();
-            controller.update_setpoint(speed.data);
+            controller.update_setpoint(speed);
         }
     )?;
 

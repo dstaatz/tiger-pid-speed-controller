@@ -2,6 +2,7 @@
 
 
 use std::time::Duration;
+use std::cmp::Ordering;
 
 use pid::Pid;
 use rosrust_msg::std_msgs::Float64;
@@ -22,22 +23,25 @@ pub struct PidConstants {
 pub struct SpeedPidController {
     pid: Pid<f64>,
     prev_tf: Option<TransformStamped>,
+    constant_speed: f64,
 }
 
 impl SpeedPidController {
 
     /// Create a new controller
-    pub fn new(c: PidConstants) -> Self {
+    pub fn new(c: PidConstants, constant_speed: f64) -> Self {
         let pid = Pid::new(c.kp, c.ki, c.kd, c.p_limit, c.i_limit, c.d_limit, 0.0);
-        Self { pid, prev_tf: None}
+        Self { pid, prev_tf: None, constant_speed }
     }
 
     // Update the setpoint
-    pub fn update_setpoint(&mut self, setpoint: f64) {
-        self.pid.setpoint = match setpoint {
-            x if x > 1.0 => 1.0,
-            x if x < -1.0 => -1.0,
-            x => x,
+    pub fn update_setpoint(&mut self, input: Float64) {
+        
+        match input.data.partial_cmp(&0.0) {
+            Some(Ordering::Greater) => self.pid.setpoint = self.constant_speed,
+            Some(Ordering::Less) => self.pid.setpoint = -1.0 * self.constant_speed,
+            Some(Ordering::Equal) => self.pid.setpoint = 0.0,
+            None => self.pid.setpoint = 0.0,
         }
     }
 
@@ -51,6 +55,7 @@ impl SpeedPidController {
             },
             Some(prev) => {
                 let speed = calc_speed(prev, &tf);
+                rosrust::ros_info!("Current measured speed: {}", speed);
                 let output = self.pid.next_control_output(speed);
                 self.prev_tf = Some(tf);
                 Float64 { data: output.output }
