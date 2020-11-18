@@ -78,7 +78,8 @@ pub fn run() -> Result<()> {
         100,
         move |pose: Pose2D| {
 
-            rosrust::ros_info!("Received pose");
+            println!("RUST: Received pose: {:?}", pose);
+            rosrust::ros_info!("ROS: Received pose: {:?}", pose);
 
             // Update the new pose
             let mut controller = update_controller.lock().unwrap();
