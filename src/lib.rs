@@ -26,12 +26,12 @@ use speed::{PidConstants, SpeedPidController};
 pub fn run() -> Result<()> {
 
     let pid_constants = PidConstants {
-        kp: 6.0,
-        ki: 0.1,
+        kp: 3.0,
+        ki: 0.0,
         kd: 0.0,
-        p_limit: 100.0,
-        i_limit: 100.0,
-        d_limit: 100.0,
+        p_limit: 5.0,
+        i_limit: 0.0,
+        d_limit: 10.0,
     };
 
     let constant_speed: f64 = rosrust::param("~constant_speed").unwrap().get().unwrap_or(0.5);

@@ -84,9 +84,8 @@ fn calc_speed_from_pose(prev: &(Instant, Pose2D), cur: &Pose2D) -> f64 {
     let t_theta = f64::atan2(delta_y, delta_x); // Theta formed by delta's (translational theta)
     let r_theta = cur.theta; // robot's global theta
 
-    rosrust::ros_info!("(t_theta, r_theta) {}, {}", t_theta, r_theta);
-
-    let forward = direction(t_theta, r_theta);
+    // Direction is inverted because x-axis points backwards on our car
+    let forward = !direction(t_theta, r_theta);
     let direction = if forward { 1.0 } else { -1.0 };
 
     direction * (delta_x*delta_x + delta_y*delta_y).sqrt() / delta_time
@@ -95,6 +94,7 @@ fn calc_speed_from_pose(prev: &(Instant, Pose2D), cur: &Pose2D) -> f64 {
 
 /// Determine wether this step had forward velocity or backwards velocity using car model
 /// Basically we want to know if r_theta is between in the range t_theta +- FRAC_PI_2
+/// but it is made more complicated by overflows and underflows in the range +-PI
 fn direction(t_theta: f64, r_theta: f64) -> bool {
     
     use std::f64::consts::{PI, FRAC_PI_2};
@@ -127,7 +127,6 @@ fn direction(t_theta: f64, r_theta: f64) -> bool {
 mod tests {
 
     use std::f64::consts::{PI, FRAC_PI_2, FRAC_PI_4, FRAC_PI_6};
-    const TWO_PI: f64 = 2.0 * PI;
     
     use super::*;
 
