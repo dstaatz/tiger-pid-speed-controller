@@ -27,10 +27,10 @@ pub fn run() -> Result<()> {
 
     let pid_constants = PidConstants {
         kp: 3.0,
-        ki: 0.0,
+        ki: 0.5,
         kd: 0.0,
         p_limit: 5.0,
-        i_limit: 0.0,
+        i_limit: 1.0,
         d_limit: 10.0,
     };
 
