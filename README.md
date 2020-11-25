@@ -1,3 +1,3 @@
 # tiger-pid-speed-controller-ros
 
-TODO
+An ROS node that provides speed control for the emerald-tiger project. 
